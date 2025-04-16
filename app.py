@@ -279,7 +279,7 @@ with tab3:
         st.session_state.chat_history.append(("AI", ai_reply))
         
         # Force rerun to show new messages
-        st.experimental_rerun()
+        st.rerun()
 
 with tab4:
     st.header("📝 Writing Practice")
