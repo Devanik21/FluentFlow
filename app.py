@@ -238,48 +238,7 @@ with tab2:
     st.write("This feature would allow users to record their pronunciation and get feedback.")
     st.caption("Note: Speech recognition functionality requires additional API integration.")
 
-with tab3:
-    st.header("💬 Practice Conversation with AI")
-    
-    # Set conversation context
-    conversation_context = st.selectbox("Conversation Context", 
-                          ["General Chat", "Restaurant", "Travel", "Shopping", "Business Meeting", "Medical Appointment"])
-    
-    conversation_prompt_template = f"""You are a {target_language} conversation partner for a {skill_level.lower()} learner.
-    We're practicing a conversation in a {conversation_context.lower()} context.
-    
-    Rules:
-    1. Respond in {target_language} first, then provide English translation.
-    2. Keep responses appropriate for {skill_level.lower()} level.
-    3. Gently correct major mistakes.
-    4. Stay in character as a {conversation_context.lower()} participant.
-    
-    User input: {{user_input}}"""
-    
-    # Clear chat button
-    if st.button("Clear Chat History"):
-        st.session_state.chat_history = []
-    
-    # Display chat history
-    for speaker, message in st.session_state.chat_history:
-        if speaker == "You":
-            st.markdown(f"**You:** {message}")
-        else:
-            st.markdown(f"**AI:** {message}")
-    
-    # Chat input
-    user_input = st.text_input("You:", key="chat_input")
-    
-    if user_input:
-        convo_prompt = conversation_prompt_template.format(user_input=user_input)
-        ai_reply = gemini_response(convo_prompt)
-        
-        # Add to history
-        st.session_state.chat_history.append(("You", user_input))
-        st.session_state.chat_history.append(("AI", ai_reply))
-        
-        # Force rerun to show new messages
-        st.rerun()
+
 
 with tab4:
     st.header("📝 Writing Practice")
