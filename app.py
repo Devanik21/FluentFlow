@@ -25,29 +25,56 @@ def gemini_response(prompt):
 
 st.title("🌍 AI-Powered Language Learning (Gemini)")
 
-# Section 1: Vocabulary List
-st.header("🧠 Personalized Vocabulary List")
-vocab_prompt = f"Create a {skill_level.lower()} vocabulary list (10 words) for someone learning {target_language}. Include English meanings."
-vocab_list = gemini_response(vocab_prompt)
-st.markdown(vocab_list)
+# Tabs for separating features
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🧠 Vocabulary & Sentences",
+    "🗣️ Pronunciation",
+    "💬 Chat with AI",
+    "ℹ️ About"
+])
 
-# Section 2: Example Sentences
-st.header("✍️ Example Sentences")
-sentence_prompt = f"Give 5 {skill_level.lower()} level example sentences in {target_language} with English translations."
-sentences = gemini_response(sentence_prompt)
-st.markdown(sentences)
+with tab1:
+    st.header("🧠 Personalized Vocabulary List")
+    vocab_prompt = f"Create a {skill_level.lower()} vocabulary list (10 words) for someone learning {target_language}. Include English meanings."
+    vocab_list = gemini_response(vocab_prompt)
+    st.markdown(vocab_list)
 
-# Section 3: Pronunciation Guide
-st.header("🗣️ Pronunciation Guide")
-pronounce_prompt = f"Provide pronunciation tips for a {skill_level.lower()} learner in {target_language}."
-pronunciation = gemini_response(pronounce_prompt)
-st.markdown(pronunciation)
+    st.header("✍️ Example Sentences")
+    sentence_prompt = f"Give 5 {skill_level.lower()} level example sentences in {target_language} with English translations."
+    sentences = gemini_response(sentence_prompt)
+    st.markdown(sentences)
 
-# Section 4: AI Chatbot Conversation
-st.header("💬 Practice Conversation with AI")
-user_input = st.text_input("You:", "")
+with tab2:
+    st.header("🗣️ Pronunciation Guide")
+    pronounce_prompt = f"Provide pronunciation tips for a {skill_level.lower()} learner in {target_language}."
+    pronunciation = gemini_response(pronounce_prompt)
+    st.markdown(pronunciation)
 
-if user_input:
-    convo_prompt = f"Let's have a conversation in {target_language}. I am a {skill_level.lower()} learner. Respond to this input: {user_input}"
-    ai_reply = gemini_response(convo_prompt)
-    st.markdown(f"**AI:** {ai_reply}")
+with tab3:
+    st.header("💬 Practice Conversation with AI")
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    user_input = st.text_input("You:", "")
+    if user_input:
+        convo_prompt = f"Let's have a conversation in {target_language}. I am a {skill_level.lower()} learner. Respond to this input: {user_input}"
+        ai_reply = gemini_response(convo_prompt)
+
+        # Add to history
+        st.session_state.chat_history.append(("You", user_input))
+        st.session_state.chat_history.append(("AI", ai_reply))
+
+    for speaker, message in st.session_state.chat_history:
+        st.markdown(f"**{speaker}:** {message}")
+
+with tab4:
+    st.markdown("""
+    ## About
+    This app helps you learn languages using Google's Gemini AI.
+    - Generates personalized vocabulary
+    - Example sentences with translations
+    - Pronunciation tips
+    - Practice chatting with an AI
+
+    Built with ❤️ using Streamlit + Gemini.
+    """)
