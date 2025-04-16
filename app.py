@@ -1,104 +1,80 @@
 import streamlit as st
 import google.generativeai as genai
 
-st.set_page_config(page_title="LingoGem", layout="centered")
+# Sidebar Inputs
+st.sidebar.title("Language Learning Settings")
+api_key = st.sidebar.text_input("Enter your Gemini API Key", type="password")
+target_language = st.sidebar.selectbox("Target Language", ["Spanish", "French", "German", "Japanese", "Mandarin"])
+skill_level = st.sidebar.selectbox("Skill Level", ["Beginner", "Intermediate", "Advanced"])
 
-# ─────────────────────────────────────────────────────
-# 🌐 MAIN APP SETTINGS (Tab 1 & 2)
-# ─────────────────────────────────────────────────────
-st.sidebar.title("General Language Settings")
-main_api_key = st.sidebar.text_input("Gemini API Key (for vocab, sentences, pronunciation)", type="password", key="main_api_key")
-target_language = st.sidebar.selectbox("Target Language", ["Spanish", "French", "German", "Japanese", "Mandarin"], key="lang")
-skill_level = st.sidebar.selectbox("Skill Level", ["Beginner", "Intermediate", "Advanced"], key="level")
+# Set API Key
+if not api_key:
+    st.warning("Please enter your Gemini API key in the sidebar.")
+    st.stop()
 
-# Tabs
-tab1, tab2, tab3 = st.tabs(["📘 Learn", "🗣️ Pronunciation", "💬 AI Chatbot"])
+# Configure Gemini
+genai.configure(api_key=api_key)
+model = genai.GenerativeModel("gemini-2.0-flash")
 
-# Helper: Setup Gemini
-def setup_gemini(key):
-    genai.configure(api_key=key)
-    return genai.GenerativeModel("gemini-2.0-flash")
-
-# Helper: Get response
-def gemini_response(model, prompt):
+def gemini_response(prompt):
     try:
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
         return f"Error: {e}"
 
-# ─────────────────────────────────────────────────────
-# 📘 TAB 1 — Vocabulary & Sentences
-# ─────────────────────────────────────────────────────
+st.title("🌍 AI-Powered Language Learning (Gemini)")
+
+# Tabs for separating features
+tab1, tab2, tab3, tab4 = st.tabs([
+    "🧠 Vocabulary & Sentences",
+    "🗣️ Pronunciation",
+    "💬 Chat with AI",
+    "ℹ️ About"
+])
+
 with tab1:
-    st.header("🧠 Vocabulary & Sentences")
-    if not main_api_key:
-        st.warning("Enter your Gemini API key in the sidebar.")
-        st.stop()
+    st.header("🧠 Personalized Vocabulary List")
+    vocab_prompt = f"Create a {skill_level.lower()} vocabulary list (10 words) for someone learning {target_language}. Include English meanings."
+    vocab_list = gemini_response(vocab_prompt)
+    st.markdown(vocab_list)
 
-    if "learn_model" not in st.session_state:
-        st.session_state.learn_model = setup_gemini(main_api_key)
+    st.header("✍️ Example Sentences")
+    sentence_prompt = f"Give 5 {skill_level.lower()} level example sentences in {target_language} with English translations."
+    sentences = gemini_response(sentence_prompt)
+    st.markdown(sentences)
 
-    if "vocab_done" not in st.session_state:
-        vocab_prompt = f"Create a {skill_level.lower()} vocabulary list (10 words) for someone learning {target_language}. Include English meanings."
-        vocab_list = gemini_response(st.session_state.learn_model, vocab_prompt)
-        st.session_state.vocab_text = vocab_list
-        st.session_state.vocab_done = True
-
-    st.subheader("Vocabulary List")
-    st.markdown(st.session_state.vocab_text)
-
-    if "sentence_done" not in st.session_state:
-        sentence_prompt = f"Give 5 {skill_level.lower()} level example sentences in {target_language} with English translations."
-        sentences = gemini_response(st.session_state.learn_model, sentence_prompt)
-        st.session_state.sentences_text = sentences
-        st.session_state.sentence_done = True
-
-    st.subheader("Example Sentences")
-    st.markdown(st.session_state.sentences_text)
-
-# ─────────────────────────────────────────────────────
-# 🗣️ TAB 2 — Pronunciation Guide
-# ─────────────────────────────────────────────────────
 with tab2:
     st.header("🗣️ Pronunciation Guide")
-    if not main_api_key:
-        st.warning("Enter your Gemini API key in the sidebar.")
-        st.stop()
+    pronounce_prompt = f"Provide pronunciation tips for a {skill_level.lower()} learner in {target_language}."
+    pronunciation = gemini_response(pronounce_prompt)
+    st.markdown(pronunciation)
 
-    if "pronounce_done" not in st.session_state:
-        model = setup_gemini(main_api_key)
-        pronounce_prompt = f"Provide pronunciation tips for a {skill_level.lower()} learner in {target_language}."
-        st.session_state.pronounce_text = gemini_response(model, pronounce_prompt)
-        st.session_state.pronounce_done = True
-
-    st.markdown(st.session_state.pronounce_text)
-
-# ─────────────────────────────────────────────────────
-# 💬 TAB 3 — Isolated AI Chatbot
-# ─────────────────────────────────────────────────────
 with tab3:
-    st.header("💬 Practice Conversation")
+    st.header("💬 Practice Conversation with AI")
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
 
-    chat_api_key = st.text_input("Gemini API Key (for chat)", type="password", key="chat_api_key")
-    
-    if chat_api_key:
-        if "chat_model" not in st.session_state:
-            st.session_state.chat_model = setup_gemini(chat_api_key)
+    user_input = st.text_input("You:", "")
+    if user_input:
+        convo_prompt = f"Let's have a conversation in {target_language}. I am a {skill_level.lower()} learner. Respond to this input: {user_input}"
+        ai_reply = gemini_response(convo_prompt)
 
-        if "chat_history" not in st.session_state:
-            st.session_state.chat_history = []
+        # Add to history
+        st.session_state.chat_history.append(("You", user_input))
+        st.session_state.chat_history.append(("AI", ai_reply))
 
-        user_input = st.text_input("You:", key="chat_input")
+    for speaker, message in st.session_state.chat_history:
+        st.markdown(f"**{speaker}:** {message}")
 
-        if user_input:
-            convo_prompt = f"Let's have a conversation in {target_language}. I am a {skill_level.lower()} learner. Respond to: {user_input}"
-            ai_reply = gemini_response(st.session_state.chat_model, convo_prompt)
+with tab4:
+    st.markdown("""
+    ## About
+    This app helps you learn languages using Google's Gemini AI.
+    - Generates personalized vocabulary
+    - Example sentences with translations
+    - Pronunciation tips
+    - Practice chatting with an AI
 
-            st.session_state.chat_history.append(("You", user_input))
-            st.session_state.chat_history.append(("AI", ai_reply))
-
-        for speaker, message in st.session_state.chat_history:
-            st.markdown(f"**{speaker}:** {message}")
-    else:
-        st.info("Please enter a Gemini API key for the chatbot.")
+    Built with ❤️ using Streamlit + Gemini.
+    """)
