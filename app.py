@@ -636,7 +636,7 @@ with tab5:
                                             game['game_over'] = True
                                     
                                     # Force page refresh to update UI
-                                    st.experimental_rerun()
+                                    st.rerun()
 
 
 # Add this function to make sure we generate 20 questions
