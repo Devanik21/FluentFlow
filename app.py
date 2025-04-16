@@ -305,15 +305,24 @@ with tab5:
         if st.button("Generate New Quiz") or (settings_changed and not st.session_state.quiz_questions):
             # Generate vocabulary if needed
             if not st.session_state.flashcards:
-                vocab_prompt = f"""Create a {skill_level.lower()} vocabulary list of 20 mixed questions for someone learning {target_language} with a focus on {learning_focus.lower()}. 
+                vocab_prompt = f"""Create a {skill_level.lower()} vocabulary list of 20 words for someone learning {target_language} with a focus on {learning_focus.lower()}. 
                 Include English meanings. Format each entry as 'word - meaning' for easy parsing."""
                 
                 vocab_response = gemini_response(vocab_prompt)
                 parsed_vocab = parse_vocab_list(vocab_response)
                 st.session_state.flashcards = parsed_vocab
             
-            # Generate quiz from vocabulary
-            st.session_state.quiz_questions = generate_quiz(st.session_state.flashcards)
+            # Ensure we have enough vocabulary items
+            if len(st.session_state.flashcards) < 20:
+                additional_prompt = f"""Create {20 - len(st.session_state.flashcards)} more {skill_level.lower()} vocabulary words for someone learning {target_language} with a focus on {learning_focus.lower()}. 
+                Include English meanings. Format each entry as 'word - meaning' for easy parsing."""
+                
+                additional_response = gemini_response(additional_prompt)
+                additional_vocab = parse_vocab_list(additional_response)
+                st.session_state.flashcards.extend(additional_vocab)
+            
+            # Generate quiz from vocabulary - ensure 20 questions
+            st.session_state.quiz_questions = generate_quiz(st.session_state.flashcards, num_questions=20)
             st.session_state.quiz_score = 0
             st.session_state.quiz_total = 0
         
@@ -385,12 +394,329 @@ with tab5:
                 st.markdown(f"### {card['meaning']}")
     
     elif game_type == "Word Match":
-        st.write("This is a placeholder for a word matching game.")
-        st.write("In a full implementation, users would match words in the target language with their English translations.")
+        if not st.session_state.get('word_match_generated', False) or st.button("Generate New Word Match"):
+            # Generate vocabulary for matching if needed
+            vocab_prompt = f"""Create a {skill_level.lower()} vocabulary list (8 words) for someone learning {target_language} with a focus on {learning_focus.lower()}. 
+            Include English meanings. Format each entry as 'word - meaning' for easy parsing."""
+            
+            vocab_response = gemini_response(vocab_prompt)
+            match_vocab = parse_vocab_list(vocab_response)
+            
+            # Create shuffled lists for matching
+            target_words = [item['word'] for item in match_vocab]
+            meanings = [item['meaning'] for item in match_vocab]
+            
+            import random
+            shuffled_meanings = meanings.copy()
+            random.shuffle(shuffled_meanings)
+            
+            st.session_state.word_match = {
+                'words': target_words,
+                'original_meanings': meanings,
+                'shuffled_meanings': shuffled_meanings,
+                'selected': [None] * len(target_words),
+                'checked': False,
+                'score': 0
+            }
+            st.session_state.word_match_generated = True
+        
+        if st.session_state.get('word_match', None):
+            st.markdown("### Match the words with their meanings")
+            st.markdown("Select the correct meaning for each word:")
+            
+            match_data = st.session_state.word_match
+            
+            for i, word in enumerate(match_data['words']):
+                st.markdown(f"**{i+1}. {word}**")
+                
+                # Create dropdown for each word
+                selected_meaning = st.selectbox(
+                    f"Select meaning for '{word}':", 
+                    options=match_data['shuffled_meanings'],
+                    index=0 if match_data['selected'][i] is None else match_data['shuffled_meanings'].index(match_data['selected'][i]),
+                    key=f"match_{i}"
+                )
+                
+                # Store selection
+                match_data['selected'][i] = selected_meaning
+            
+            if st.button("Check Answers"):
+                score = 0
+                for i, word in enumerate(match_data['words']):
+                    correct_meaning = match_data['original_meanings'][i]
+                    if match_data['selected'][i] == correct_meaning:
+                        st.success(f"✓ '{word}' correctly matched with '{correct_meaning}'")
+                        score += 1
+                    else:
+                        st.error(f"✗ '{word}' should be matched with '{correct_meaning}'")
+                
+                st.session_state.word_match['checked'] = True
+                st.session_state.word_match['score'] = score
+                
+                # Display score
+                st.markdown(f"### Score: {score}/{len(match_data['words'])}")
     
     elif game_type == "Hangman":
-        st.write("This is a placeholder for a hangman game.")
-        st.write("In a full implementation, users would guess letters to discover hidden words in the target language.")
+        # Initialize hangman game if needed
+        if not st.session_state.get('hangman_initialized', False) or st.button("New Game"):
+            # Get a random word from target language vocabulary
+            if not st.session_state.get('hangman_vocab', None):
+                vocab_prompt = f"""Create a {skill_level.lower()} vocabulary list (15 words) for someone learning {target_language} with a focus on {learning_focus.lower()}. 
+                Include only single words (no phrases) with English meanings. Format each entry as 'word - meaning' for easy parsing."""
+                
+                vocab_response = gemini_response(vocab_prompt)
+                hangman_vocab = parse_vocab_list(vocab_response)
+                st.session_state.hangman_vocab = hangman_vocab
+            
+            # Select a random word
+            import random
+            selected_item = random.choice(st.session_state.hangman_vocab)
+            
+            # Initialize game state
+            st.session_state.hangman = {
+                'word': selected_item['word'].lower(),
+                'meaning': selected_item['meaning'],
+                'guessed_letters': set(),
+                'max_attempts': 6,
+                'attempts': 0,
+                'game_over': False,
+                'won': False
+            }
+            st.session_state.hangman_initialized = True
+        
+        if st.session_state.get('hangman', None):
+            game = st.session_state.hangman
+            
+            # Display current state
+            st.markdown("### Hangman Game")
+            
+            # Display word with blanks for unguessed letters
+            display_word = ""
+            all_guessed = True
+            
+            for letter in game['word']:
+                if letter in game['guessed_letters'] or not letter.isalpha():
+                    display_word += letter + " "
+                else:
+                    display_word += "_ "
+                    all_guessed = False
+            
+            st.markdown(f"## {display_word}")
+            
+            # Display meaning as a hint
+            st.markdown(f"**Hint:** {game['meaning']}")
+            
+            # Display guessed letters
+            st.markdown(f"**Guessed letters:** {', '.join(sorted(game['guessed_letters'])) if game['guessed_letters'] else 'None'}")
+            
+            # Display attempts left
+            attempts_left = game['max_attempts'] - game['attempts']
+            st.markdown(f"**Attempts left:** {attempts_left}")
+            
+            # Display hangman figure
+            hangman_stages = [
+                """
+                -----
+                |   
+                |   
+                |   
+                |   
+                ------
+                """,
+                """
+                -----
+                |   O
+                |   
+                |   
+                |   
+                ------
+                """,
+                """
+                -----
+                |   O
+                |   |
+                |   
+                |   
+                ------
+                """,
+                """
+                -----
+                |   O
+                |  /|
+                |   
+                |   
+                ------
+                """,
+                """
+                -----
+                |   O
+                |  /|\\
+                |   
+                |   
+                ------
+                """,
+                """
+                -----
+                |   O
+                |  /|\\
+                |  / 
+                |   
+                ------
+                """,
+                """
+                -----
+                |   O
+                |  /|\\
+                |  / \\
+                |   
+                ------
+                """
+            ]
+            
+            st.text(hangman_stages[game['attempts']])
+            
+            # Check if game is over
+            if all_guessed:
+                st.success("🎉 Congratulations! You guessed the word!")
+                game['game_over'] = True
+                game['won'] = True
+            elif attempts_left <= 0:
+                st.error(f"😢 Game over! The word was: {game['word']}")
+                game['game_over'] = True
+            
+            # Letter input if game is not over
+            if not game['game_over']:
+                col1, col2 = st.columns([3, 1])
+                
+                with col1:
+                    letter = st.text_input("Guess a letter:", max_chars=1).lower()
+                
+                with col2:
+                    if st.button("Guess") and letter:
+                        if letter.isalpha():
+                            if letter in game['guessed_letters']:
+                                st.warning(f"You already guessed '{letter}'!")
+                            else:
+                                game['guessed_letters'].add(letter)
+                                
+                                if letter not in game['word']:
+                                    game['attempts'] += 1
+                                    if game['attempts'] >= game['max_attempts']:
+                                        st.error(f"😢 Game over! The word was: {game['word']}")
+                                        game['game_over'] = True
+                        else:
+                            st.warning("Please enter a valid letter.")
+                
+                # Also allow clicking on letters
+                st.markdown("### Click to guess:")
+                alphabet = "abcdefghijklmnopqrstuvwxyz"
+                
+                # Create 3 rows of letters
+                for i in range(0, len(alphabet), 9):
+                    cols = st.columns(min(9, len(alphabet) - i))
+                    for j, col in enumerate(cols):
+                        letter_idx = i + j
+                        if letter_idx < len(alphabet):
+                            current_letter = alphabet[letter_idx]
+                            button_state = current_letter in game['guessed_letters']
+                            
+                            # Use a unique key for each button
+                            if col.button(
+                                current_letter.upper(), 
+                                key=f"btn_{current_letter}", 
+                                disabled=button_state or game['game_over']
+                            ):
+                                if current_letter not in game['guessed_letters']:
+                                    game['guessed_letters'].add(current_letter)
+                                    
+                                    if current_letter not in game['word']:
+                                        game['attempts'] += 1
+                                        if game['attempts'] >= game['max_attempts']:
+                                            st.error(f"😢 Game over! The word was: {game['word']}")
+                                            game['game_over'] = True
+                                    
+                                    # Force page refresh to update UI
+                                    st.experimental_rerun()
+
+
+# Add this function to make sure we generate 20 questions
+def generate_quiz(vocabulary, num_questions=20):
+    """Generate quiz questions from vocabulary list."""
+    import random
+    
+    # Ensure we have enough vocabulary
+    if len(vocabulary) < num_questions:
+        # Just in case we don't have enough vocabulary items
+        return generate_quiz(vocabulary * (num_questions // len(vocabulary) + 1), num_questions)
+    
+    questions = []
+    words_used = set()
+    
+    # Make sure we have exactly the requested number of questions
+    while len(questions) < num_questions:
+        # Select unused vocabulary items for this question
+        available_items = [item for i, item in enumerate(vocabulary) if i not in words_used]
+        if not available_items:  # If we've used all vocabulary items, reset
+            words_used = set()
+            available_items = vocabulary
+            
+        item = random.choice(available_items)
+        words_used.add(vocabulary.index(item))
+        
+        # Randomly choose question type
+        question_type = random.choice(['multiple_choice', 'fill_blank'])
+        
+        if question_type == 'multiple_choice':
+            # Create multiple choice question
+            question_format = random.choice([
+                f"What is the meaning of '{item['word']}'?",
+                f"Which translation is correct for '{item['word']}'?"
+            ])
+            
+            # Generate options (including the correct answer)
+            options = [item['meaning']]
+            
+            # Add incorrect options
+            other_items = [v for v in vocabulary if v != item]
+            random.shuffle(other_items)
+            
+            for other_item in other_items[:3]:  # Add 3 distractors
+                if other_item['meaning'] not in options:
+                    options.append(other_item['meaning'])
+                if len(options) >= 4:
+                    break
+            
+            # If we couldn't get 4 unique options, add some variations
+            while len(options) < 4:
+                fake_meaning = random.choice(vocabulary)['meaning'] + " (modified)"
+                if fake_meaning not in options:
+                    options.append(fake_meaning)
+            
+            random.shuffle(options)
+            
+            questions.append({
+                'type': 'multiple_choice',
+                'question': question_format,
+                'options': options,
+                'correct_answer': item['meaning']
+            })
+            
+        elif question_type == 'fill_blank':
+            # Create fill-in-the-blank question
+            question_format = random.choice([
+                f"What is the {target_language} word for '{item['meaning']}'?",
+                f"Translate '{item['meaning']}' to {target_language}:"
+            ])
+            
+            questions.append({
+                'type': 'fill_blank',
+                'question': question_format,
+                'correct_answer': item['word']
+            })
+    
+    # Take exactly the number of questions requested (in case we generated extras)
+    return questions[:num_questions]
+
 
 with tab6:
     st.markdown("""
