@@ -211,34 +211,225 @@ with tab1:
 with tab2:
     st.header("🗣️ Pronunciation Guide")
     
-    pronunciation_type = st.radio("Select pronunciation focus", 
-                                ["General Tips", "Common Sounds", "Tongue Twisters"])
+    # Create tabs for different pronunciation features
+    pronun_tabs = st.tabs(["Learning Materials", "Interactive Tools", "Audio Lab", "Visual Aids"])
     
-    if st.button("Generate Pronunciation Guide"):
-        if pronunciation_type == "General Tips":
-            pronounce_prompt = f"""Provide pronunciation tips for a {skill_level.lower()} learner in {target_language}.
-            Focus on general rules and common mistakes to avoid."""
-        elif pronunciation_type == "Common Sounds":
-            pronounce_prompt = f"""Explain how to pronounce 5 difficult sounds in {target_language} for {skill_level.lower()} students.
-            Include examples and English approximations where possible."""
-        else:
-            pronounce_prompt = f"""Create 3 tongue twisters in {target_language} for {skill_level.lower()} students 
-            with translations and pronunciation notes."""
+    with pronun_tabs[0]:
+        pronunciation_type = st.radio("Select pronunciation focus", 
+                                    ["General Tips", "Common Sounds", "Tongue Twisters", "Rhythm & Intonation", "Regional Accents"])
+        
+        if st.button("Generate Pronunciation Guide"):
+            with st.spinner("Generating pronunciation content..."):
+                if pronunciation_type == "General Tips":
+                    pronounce_prompt = f"""Provide 5 essential pronunciation tips for a {skill_level.lower()} learner in {target_language}.
+                    Focus on general rules, common mistakes to avoid, and provide specific examples for each tip."""
+                elif pronunciation_type == "Common Sounds":
+                    pronounce_prompt = f"""Explain how to pronounce 5 difficult sounds in {target_language} for {skill_level.lower()} students.
+                    Include examples, English approximations where possible, and describe the exact mouth positioning for each sound."""
+                elif pronunciation_type == "Tongue Twisters":
+                    pronounce_prompt = f"""Create 3 progressively difficult tongue twisters in {target_language} for {skill_level.lower()} students 
+                    with translations, pronunciation notes, and the specific sounds they help practice."""
+                elif pronunciation_type == "Rhythm & Intonation":
+                    pronounce_prompt = f"""Explain the rhythm, stress patterns, and intonation rules of {target_language} for {skill_level.lower()} learners.
+                    Include 3 practice sentences with marked stress and intonation patterns."""
+                else:  # Regional Accents
+                    pronounce_prompt = f"""Describe 3 major regional accents or dialects in {target_language}.
+                    Highlight their key pronunciation differences, provide example words showing these differences, and explain where these accents are spoken."""
+                    
+                pronunciation = gemini_response(pronounce_prompt)
+                st.markdown(pronunciation)
+        
+        # Phonetic chart
+        st.subheader("📊 Phonetic Chart")
+        if st.button("Show Phonetic Chart"):
+            with st.spinner("Generating phonetic chart..."):
+                phonetic_prompt = f"""Create a comprehensive phonetic chart for {target_language} showing all the main sounds.
+                For each sound, provide:
+                1. The IPA symbol
+                2. Example words in {target_language}
+                3. Closest English approximation if any
+                
+                Format this as a well-organized markdown table."""
+                
+                phonetic_chart = gemini_response(phonetic_prompt)
+                st.markdown(phonetic_chart)
+    
+    with pronun_tabs[1]:
+        st.subheader("🔄 Interactive Pronunciation Tools")
+        
+        # Minimal pairs practice
+        st.write("### Minimal Pairs Practice")
+        if st.button("Generate Minimal Pairs"):
+            with st.spinner("Generating minimal pairs..."):
+                minimal_pairs_prompt = f"""Create 5 sets of minimal pairs in {target_language} that {skill_level.lower()} learners often struggle with.
+                For each pair:
+                1. Show the two words
+                2. Provide their meanings
+                3. Explain the exact sound difference
+                4. Give a tip on distinguishing them
+                
+                Format this information clearly in markdown."""
+                
+                minimal_pairs = gemini_response(minimal_pairs_prompt)
+                st.markdown(minimal_pairs)
+        
+        # Sentence stress analyzer
+        st.write("### Sentence Stress Analyzer")
+        input_sentence = st.text_area("Enter a sentence in the target language to analyze its stress pattern:", 
+                                     placeholder=f"Type a sentence in {target_language} here...")
+        
+        if st.button("Analyze Stress Pattern") and input_sentence:
+            with st.spinner("Analyzing stress pattern..."):
+                stress_prompt = f"""Analyze the following sentence in {target_language} and mark the stressed syllables and intonation pattern:
+                
+                "{input_sentence}"
+                
+                Provide:
+                1. The sentence with stressed syllables marked in UPPERCASE
+                2. Intonation pattern (rising, falling, etc.)
+                3. Tips for proper pronunciation"""
+                
+                stress_analysis = gemini_response(stress_prompt)
+                st.markdown(stress_analysis)
+        
+        # Syllable breakdown tool
+        st.write("### Syllable Breakdown Tool")
+        word_to_break = st.text_input("Enter a word to break into syllables:", 
+                                     placeholder=f"Type a word in {target_language}...")
+        
+        if st.button("Break into Syllables") and word_to_break:
+            with st.spinner("Breaking into syllables..."):
+                syllable_prompt = f"""Break the {target_language} word "{word_to_break}" into syllables.
+                
+                Provide:
+                1. Each syllable separated by hyphens
+                2. Which syllables are stressed (primary and secondary stress if applicable)
+                3. Pronunciation guide for each syllable
+                4. Any special pronunciation rules that apply to this word"""
+                
+                syllable_breakdown = gemini_response(syllable_prompt)
+                st.markdown(syllable_breakdown)
+    
+    with pronun_tabs[2]:
+        st.subheader("🎵 Interactive Audio Lab")
+        
+        # Mock audio player with playback speed control
+        st.write("### Audio Examples with Variable Speed")
+        audio_type = st.selectbox("Choose audio example type:", 
+                                ["Common Phrases", "Difficult Sounds", "Pronunciation Drills", "Tone Patterns"])
+        
+        speed_options = {0.5: "Slow (0.5x)", 0.75: "Slower (0.75x)", 1.0: "Normal (1.0x)", 1.25: "Faster (1.25x)"}
+        playback_speed = st.select_slider("Playback Speed:", 
+                                        options=[0.5, 0.75, 1.0, 1.25],
+                                        format_func=lambda x: speed_options[x],
+                                        value=1.0)
+        
+        if st.button("Generate Audio Examples"):
+            with st.spinner("Generating audio content..."):
+                audio_prompt = f"""Generate {3} {audio_type.lower()} in {target_language} for {skill_level.lower()} learners.
+                
+                For each example, provide:
+                1. The text in {target_language}
+                2. English translation
+                3. Detailed pronunciation notes"""
+                
+                audio_examples = gemini_response(audio_prompt)
+                st.markdown(audio_examples)
+                
+                # Mock audio player UI
+                for i in range(3):
+                    cols = st.columns([1, 8, 1])
+                    with cols[0]:
+                        st.button("▶️", key=f"play_{i}")
+                    with cols[1]:
+                        st.progress(0)
+                    with cols[2]:
+                        st.write(f"{speed_options[playback_speed]}")
+        
+        # Voice comparison tool mockup
+        st.write("### Speech Analysis Tool")
+        st.write("Record your pronunciation and compare it to a native speaker")
+        
+        # Mock recording interface
+        cols = st.columns([2, 1])
+        with cols[0]:
+            st.text_input("Phrase to practice:", placeholder="Type a phrase to practice...")
+        with cols[1]:
+            st.button("🎙️ Record", type="primary")
+        
+        # Mock comparison results
+        with st.expander("View detailed pronunciation feedback"):
+            st.write("This tool would provide visualization of your speech compared to native pronunciation, with:")
+            st.write("- Waveform comparison")
+            st.write("- Pitch and intonation graphs")
+            st.write("- Specific feedback on problem sounds")
+            st.write("- Accuracy score and improvement suggestions")
+    
+    with pronun_tabs[3]:
+        st.subheader("👁️ Visual Pronunciation Aids")
+        
+        # Articulation diagrams
+        st.write("### Mouth & Tongue Position Diagrams")
+        sound_to_show = st.selectbox("Select a sound to visualize:", 
+                                    ["Vowels", "Consonants", "Diphthongs", "Special Sounds"])
+        
+        if st.button("Show Articulation Diagrams"):
+            with st.spinner("Generating diagrams..."):
+                diagram_prompt = f"""Create a detailed explanation of how to position the mouth, tongue, and lips for {sound_to_show.lower()} in {target_language}.
+                
+                Include:
+                1. Step-by-step instructions for proper articulation
+                2. Common mistakes made by {native_language} speakers
+                3. Practice exercises focused on these specific sounds"""
+                
+                diagrams = gemini_response(diagram_prompt)
+                st.markdown(diagrams)
+                
+                # Mock diagram display
+                st.write("Visualization would show cross-section diagrams of the mouth showing proper tongue and lip positions")
+                cols = st.columns(3)
+                for i in range(3):
+                    with cols[i]:
+                        st.markdown(f"#### Sound {i+1}")
+                        st.text("Diagram would appear here")
+        
+        # IPA interactive chart
+        st.write("### Interactive IPA Chart")
+        st.write("Explore the International Phonetic Alphabet (IPA) symbols used in your target language")
+        
+        # Create a simple mock IPA interactive chart
+        cols = st.columns(4)
+        ipa_examples = {
+            "a": "father", "e": "bed", "i": "see", 
+            "o": "go", "u": "blue", "ə": "about",
+            "ʃ": "ship", "ʒ": "vision", "θ": "think",
+            "ð": "this", "ʧ": "chair", "ʤ": "judge"
+        }
+        
+        for i, (symbol, example) in enumerate(ipa_examples.items()):
+            with cols[i % 4]:
+                if st.button(f"{symbol}", key=f"ipa_{i}"):
+                    st.session_state.selected_ipa = symbol
+        
+        if st.session_state.get("selected_ipa"):
+            symbol = st.session_state.selected_ipa
+            st.markdown(f"### IPA Symbol: [{symbol}]")
             
-        pronunciation = gemini_response(pronounce_prompt)
-        st.markdown(pronunciation)
-    
-    # Audio placeholder
-    st.header("🎵 Audio Examples")
-    st.write("This feature would connect to a text-to-speech API to provide audio examples.")
-    st.caption("Note: Audio functionality requires additional API integration.")
-    
-    # Pronunciation feedback
-    st.header("🎤 Pronunciation Feedback")
-    st.write("This feature would allow users to record their pronunciation and get feedback.")
-    st.caption("Note: Speech recognition functionality requires additional API integration.")
+            with st.spinner("Generating information..."):
+                ipa_prompt = f"""Provide information about the IPA symbol [{symbol}] as it relates to {target_language} pronunciation.
+                
+                Include:
+                1. How it's pronounced in {target_language}
+                2. Example words containing this sound
+                3. How it differs from similar sounds in English
+                4. Tips for mastering this sound"""
+                
+                ipa_info = gemini_response(ipa_prompt)
+                st.markdown(ipa_info)
 
-
+# Add this to your session state initialization code at the beginning of the app
+if 'selected_ipa' not in st.session_state:
+    st.session_state.selected_ipa = None
 
 with tab4:
     st.header("📝 Writing Practice")
