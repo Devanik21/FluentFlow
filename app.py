@@ -305,7 +305,7 @@ with tab5:
         if st.button("Generate New Quiz") or (settings_changed and not st.session_state.quiz_questions):
             # Generate vocabulary if needed
             if not st.session_state.flashcards:
-                vocab_prompt = f"""Create a {skill_level.lower()} vocabulary list of 20 questions(10 words) for someone learning {target_language} with a focus on {learning_focus.lower()}. 
+                vocab_prompt = f"""Create a {skill_level.lower()} vocabulary list of 20 mixed questions for someone learning {target_language} with a focus on {learning_focus.lower()}. 
                 Include English meanings. Format each entry as 'word - meaning' for easy parsing."""
                 
                 vocab_response = gemini_response(vocab_prompt)
