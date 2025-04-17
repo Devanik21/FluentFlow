@@ -436,61 +436,531 @@ with tab2:
 if 'selected_ipa' not in st.session_state:
     st.session_state.selected_ipa = None
 
-with tab4:
+def render_writing_practice_tab():
     st.header("📝 Writing Practice")
     
-    writing_type = st.selectbox("Writing Exercise Type", 
-                   ["Guided Composition", "Translation Exercise", "Fill in the Blanks", "Creative Writing"])
+    # Create nested tabs for different writing exercise categories
+    writing_categories = ["Guided Practice", "Interactive Exercises", "Creative Workspace", "Progress Tracker"]
+    writing_cat_tab1, writing_cat_tab2, writing_cat_tab3, writing_cat_tab4 = st.tabs(writing_categories)
+    
+    with writing_cat_tab1:
+        render_guided_practice()
+    
+    with writing_cat_tab2:
+        render_interactive_exercises()
+    
+    with writing_cat_tab3:
+        render_creative_workspace()
+    
+    with writing_cat_tab4:
+        render_progress_tracker()
+
+def render_guided_practice():
+    st.subheader("Guided Practice")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        writing_type = st.selectbox(
+            "Exercise Type", 
+            ["Guided Composition", "Translation Exercise", "Fill in the Blanks", "Sentence Construction"]
+        )
+    
+    with col2:
+        difficulty = st.slider("Difficulty Level", 1, 5, value=skill_level_to_number(skill_level), 
+                            help="Adjust difficulty (1: Beginner, 5: Advanced)")
+    
+    # Session state for storing generated content
+    if "writing_exercise_content" not in st.session_state:
+        st.session_state.writing_exercise_content = ""
+    if "writing_answers" not in st.session_state:
+        st.session_state.writing_answers = ""
+    
+    exercise_container = st.container()
     
     if writing_type == "Guided Composition":
-        st.write(f"Write a short paragraph in {target_language} about one of these topics:")
-        topics = gemini_response(f"Generate 3 {skill_level.lower()} level writing topics for {target_language} students interested in {learning_focus.lower()}.")
-        st.markdown(topics)
-    
+        generation_prompt = f"""Generate 3 {skill_level.lower()} level writing topics for {target_language} 
+        students interested in {learning_focus.lower()}. Format with bullet points and include a helpful
+        vocabulary list for each topic with {target_language} words and translations."""
+        
+        if st.button("Generate Writing Topics", key="gen_comp_topics"):
+            with st.spinner(f"Generating {target_language} writing topics..."):
+                st.session_state.writing_exercise_content = gemini_response(generation_prompt)
+                st.session_state.writing_answers = ""
+        
     elif writing_type == "Translation Exercise":
-        if st.button("Generate Translation Exercise"):
-            translation_prompt = f"""Create a {skill_level.lower()} level translation exercise for English to {target_language}.
-            Provide 3 sentences in English appropriate for {learning_focus.lower()} context.
-            Then provide the correct {target_language} translations separately."""
-            
-            translation_exercise = gemini_response(translation_prompt)
-            st.markdown(translation_exercise)
+        generation_prompt = f"""Create a {skill_level.lower()} level translation exercise for English to {target_language}.
+        Provide 5 sentences in English appropriate for {learning_focus.lower()} context.
+        Include vocabulary hints for difficult words.
+        Format clearly with numbering and separate the correct translations with a clear heading."""
+        
+        if st.button("Generate Translation Exercise", key="gen_trans"):
+            with st.spinner(f"Creating {target_language} translation exercise..."):
+                exercise_response = gemini_response(generation_prompt)
+                # Split content and answers
+                parts = exercise_response.split("Correct Translations:")
+                st.session_state.writing_exercise_content = parts[0].strip()
+                st.session_state.writing_answers = parts[1].strip() if len(parts) > 1 else ""
     
     elif writing_type == "Fill in the Blanks":
-        if st.button("Generate Fill-in-the-Blanks Exercise"):
-            fill_prompt = f"""Create a {skill_level.lower()} level fill-in-the-blanks exercise in {target_language} 
-            related to {learning_focus.lower()} topics. 
-            Provide a paragraph with 5 blanks, and list the correct answers separately."""
+        generation_prompt = f"""Create a {skill_level.lower()} level fill-in-the-blanks exercise in {target_language} related to {learning_focus.lower()} topics.
+        Provide two paragraphs with 5 blanks each, and list the correct answers separately.
+        For each blank, provide 3 possible options (1 correct, 2 incorrect) to choose from."""
+        
+        if st.button("Generate Fill-in-the-Blanks", key="gen_fill"):
+            with st.spinner(f"Creating {target_language} fill-in-the-blanks exercise..."):
+                exercise_response = gemini_response(generation_prompt)
+                # Split content and answers
+                parts = exercise_response.split("Answers:")
+                st.session_state.writing_exercise_content = parts[0].strip()
+                st.session_state.writing_answers = parts[1].strip() if len(parts) > 1 else ""
+    
+    elif writing_type == "Sentence Construction":
+        generation_prompt = f"""Create a {skill_level.lower()} level sentence construction exercise in {target_language}.
+        Provide 5 sets of scrambled words that students need to rearrange into correct sentences.
+        The context should be related to {learning_focus.lower()}.
+        Include grammar tips for word order in {target_language}.
+        List the correct sentences separately."""
+        
+        if st.button("Generate Sentence Exercise", key="gen_sentence"):
+            with st.spinner(f"Creating {target_language} sentence exercise..."):
+                exercise_response = gemini_response(generation_prompt)
+                # Split content and answers
+                parts = exercise_response.split("Correct Sentences:")
+                st.session_state.writing_exercise_content = parts[0].strip()
+                st.session_state.writing_answers = parts[1].strip() if len(parts) > 1 else ""
+    
+    # Display the exercise content
+    with exercise_container:
+        if st.session_state.writing_exercise_content:
+            st.markdown(st.session_state.writing_exercise_content)
             
-            fill_exercise = gemini_response(fill_prompt)
-            st.markdown(fill_exercise)
+            # User response area
+            user_writing = st.text_area("Your response:", height=150, key="writing_response")
+            
+            col1, col2, col3 = st.columns([1, 1, 1])
+            
+            with col1:
+                if st.button("Get Feedback", disabled=not user_writing):
+                    feedback_prompt = f"""Provide detailed feedback on this {skill_level.lower()} {target_language} writing sample:
+                    "{user_writing}"
+                    Include:
+                    1. Grammar corrections (explain the rules)
+                    2. Vocabulary suggestions (provide alternatives)
+                    3. Style improvements 
+                    4. Overall assessment (rate 1-5 stars)
+                    5. Two specific improvements to focus on
+                    Be encouraging but thorough. Format with clear sections."""
+                    
+                    with st.spinner("Analyzing your writing..."):
+                        feedback = gemini_response(feedback_prompt)
+                        st.session_state.feedback = feedback
+            
+            with col2:
+                if st.button("Show Answers", disabled=not st.session_state.writing_answers):
+                    st.session_state.show_answers = not st.session_state.get("show_answers", False)
+            
+            with col3:
+                if st.button("Save to Journal"):
+                    # Save current exercise and response to journal
+                    if "writing_journal" not in st.session_state:
+                        st.session_state.writing_journal = []
+                    
+                    st.session_state.writing_journal.append({
+                        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "exercise_type": writing_type,
+                        "content": st.session_state.writing_exercise_content,
+                        "response": user_writing,
+                        "feedback": st.session_state.get("feedback", "")
+                    })
+                    st.success("Saved to your writing journal!")
+            
+            # Display feedback if available
+            if "feedback" in st.session_state:
+                st.markdown("### Feedback")
+                st.markdown(st.session_state.feedback)
+            
+            # Display answers if requested
+            if st.session_state.get("show_answers", False) and st.session_state.writing_answers:
+                st.markdown("### Answers")
+                st.markdown(st.session_state.writing_answers)
+
+def render_interactive_exercises():
+    st.subheader("Interactive Exercises")
     
-    elif writing_type == "Creative Writing":
-        st.write(f"Write a creative piece in {target_language} based on this prompt:")
-        if st.button("Generate Creative Writing Prompt"):
-            creative_prompt = f"Generate a creative writing prompt for {skill_level.lower()} {target_language} students."
-            prompt_idea = gemini_response(creative_prompt)
-            st.markdown(prompt_idea)
+    exercise_types = ["Word Order Challenge", "Contextual Cloze", "Error Correction", "Sentence Expansion"]
+    interactive_tab1, interactive_tab2, interactive_tab3, interactive_tab4 = st.tabs(exercise_types)
     
-    # Writing submission
-    user_writing = st.text_area("Your writing:", height=150)
+    with interactive_tab1:
+        st.write("Arrange the words to form correct sentences")
+        
+        if st.button("Generate Word Order Challenge"):
+            prompt = f"""Create a word order challenge for {skill_level.lower()} {target_language} learners.
+            Provide 3 sets of words that need to be arranged into grammatically correct sentences.
+            Focus on {learning_focus.lower()} vocabulary.
+            Format with clearly numbered exercises and include grammatical hints."""
+            
+            with st.spinner("Generating challenge..."):
+                word_order_exercise = gemini_response(prompt)
+                st.session_state.word_order_exercise = word_order_exercise
+        
+        if "word_order_exercise" in st.session_state:
+            st.markdown(st.session_state.word_order_exercise)
+            
+            # Simple drag-and-drop simulation with input fields
+            user_answers = []
+            for i in range(3):
+                user_answers.append(st.text_input(f"Your answer #{i+1}", key=f"word_order_{i}"))
+            
+            if st.button("Check Answers", key="check_word_order"):
+                # This would need actual answer checking logic in a real app
+                st.info("In a complete implementation, this would check your word order against the correct answers.")
     
-    if user_writing and st.button("Get Feedback"):
-        feedback_prompt = f"""Provide feedback on this {skill_level.lower()} {target_language} writing sample:
+    with interactive_tab2:
+        st.write("Fill in the blanks based on context")
         
-        "{user_writing}"
+        if st.button("Generate Contextual Cloze"):
+            prompt = f"""Create a contextual cloze exercise for {skill_level.lower()} {target_language} learners.
+            Write a coherent paragraph related to {learning_focus.lower()} with 5 strategically blanked-out words.
+            For each blank, provide a dropdown selection of 3 words (only one is correct).
+            Include a brief explanation of why each correct answer fits the context."""
+            
+            with st.spinner("Generating cloze exercise..."):
+                cloze_exercise = gemini_response(prompt)
+                st.session_state.cloze_exercise = cloze_exercise
         
-        Include:
-        1. Grammar corrections
-        2. Vocabulary suggestions
-        3. Style improvements
-        4. Overall assessment
+        if "cloze_exercise" in st.session_state:
+            st.markdown(st.session_state.cloze_exercise)
+            
+            # Simulate dropdowns for answers
+            for i in range(5):
+                st.selectbox(f"Blank #{i+1}", ["[Select an option]", "Option 1", "Option 2", "Option 3"], key=f"cloze_{i}")
+            
+            if st.button("Check Answers", key="check_cloze"):
+                st.info("In a complete implementation, this would verify your selections.")
+    
+    with interactive_tab3:
+        st.write("Find and correct errors in the text")
         
-        Be encouraging but thorough."""
+        if st.button("Generate Error Correction Exercise"):
+            prompt = f"""Create an error correction exercise for {skill_level.lower()} {target_language} learners.
+            Write a paragraph related to {learning_focus.lower()} with 5 intentional grammatical errors.
+            Errors should be appropriate for the {skill_level.lower()} level.
+            Include instructions on what types of errors to look for.
+            Provide the corrected version separately."""
+            
+            with st.spinner("Generating error correction exercise..."):
+                error_exercise = gemini_response(prompt)
+                st.session_state.error_exercise = error_exercise
         
-        feedback = gemini_response(feedback_prompt)
-        st.markdown("### Feedback")
-        st.markdown(feedback)
+        if "error_exercise" in st.session_state:
+            st.markdown(st.session_state.error_exercise)
+    
+    with interactive_tab4:
+        st.write("Expand simple sentences into more complex ones")
+        
+        if st.button("Generate Sentence Expansion Exercise"):
+            prompt = f"""Create a sentence expansion exercise for {skill_level.lower()} {target_language} learners.
+            Provide 3 simple sentences related to {learning_focus.lower()}.
+            Include specific instructions for how each sentence should be expanded (add adjectives, time expressions, etc.).
+            Provide example expanded sentences separately."""
+            
+            with st.spinner("Generating sentence expansion exercise..."):
+                expansion_exercise = gemini_response(prompt)
+                st.session_state.expansion_exercise = expansion_exercise
+        
+        if "expansion_exercise" in st.session_state:
+            st.markdown(st.session_state.expansion_exercise)
+
+def render_creative_workspace():
+    st.subheader("Creative Workspace")
+    
+    workspace_modes = ["Free Writing", "Structured Writing", "Collaborative Story", "Journal"]
+    
+    workspace_mode = st.radio("Select writing mode:", workspace_modes, horizontal=True)
+    
+    if workspace_mode == "Free Writing":
+        st.write(f"Practice free writing in {target_language}. Set a timer and just write without stopping!")
+        
+        timer_minutes = st.slider("Writing Timer (minutes)", 1, 15, 5)
+        start_timer = st.button("Start Free Writing Timer")
+        
+        if start_timer:
+            st.session_state.free_writing_end_time = datetime.now() + timedelta(minutes=timer_minutes)
+            st.session_state.free_writing_active = True
+        
+        if st.session_state.get("free_writing_active", False):
+            time_remaining = st.session_state.free_writing_end_time - datetime.now()
+            if time_remaining.total_seconds() <= 0:
+                st.success("Time's up! You can stop writing now or continue.")
+                st.session_state.free_writing_active = False
+            else:
+                mins, secs = divmod(time_remaining.seconds, 60)
+                st.info(f"⏱️ Time remaining: {mins:02d}:{secs:02d}")
+        
+        # Free writing area
+        free_text = st.text_area("Start writing here:", height=250, key="free_writing_text")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Get General Feedback", disabled=not free_text):
+                prompt = f"""Provide general feedback on this free writing in {target_language}:
+                "{free_text}"
+                Focus on encouraging aspects rather than detailed corrections.
+                Comment on fluency, creativity, and expression.
+                Suggest 1-2 areas that could be developed further."""
+                
+                with st.spinner("Analyzing your writing..."):
+                    feedback = gemini_response(prompt)
+                    st.session_state.free_writing_feedback = feedback
+        
+        with col2:
+            if st.button("Check for Major Errors", disabled=not free_text):
+                prompt = f"""Check for major errors in this {target_language} free writing:
+                "{free_text}"
+                Only highlight significant errors that impede communication.
+                Don't focus on minor mistakes or style issues.
+                Provide very brief suggestions for corrections."""
+                
+                with st.spinner("Checking for errors..."):
+                    error_check = gemini_response(prompt)
+                    st.session_state.free_writing_errors = error_check
+        
+        # Display feedback if available
+        if "free_writing_feedback" in st.session_state:
+            st.markdown("### Feedback")
+            st.markdown(st.session_state.free_writing_feedback)
+        
+        if "free_writing_errors" in st.session_state:
+            st.markdown("### Major Errors")
+            st.markdown(st.session_state.free_writing_errors)
+    
+    elif workspace_mode == "Structured Writing":
+        st.write(f"Follow a structured writing prompt in {target_language}")
+        
+        prompt_types = ["Descriptive", "Narrative", "Argumentative", "Informative"]
+        prompt_type = st.selectbox("Writing type:", prompt_types)
+        
+        if st.button("Generate Writing Prompt"):
+            prompt = f"""Generate a detailed {prompt_type.lower()} writing prompt for {skill_level.lower()} {target_language} students.
+            The theme should relate to {learning_focus.lower()}.
+            Include:
+            1. A clear main prompt question/instruction
+            2. 3-4 guiding questions to help structure the response
+            3. Key vocabulary in {target_language} that would be useful (with translations)
+            4. A suggested structure for the response
+            5. Word count target appropriate for {skill_level.lower()} level"""
+            
+            with st.spinner("Creating writing prompt..."):
+                writing_prompt = gemini_response(prompt)
+                st.session_state.structured_writing_prompt = writing_prompt
+        
+        if "structured_writing_prompt" in st.session_state:
+            st.markdown(st.session_state.structured_writing_prompt)
+            
+            structured_response = st.text_area("Write your response:", height=250, key="structured_writing_text")
+            
+            if st.button("Get Detailed Feedback", disabled=not structured_response):
+                feedback_prompt = f"""Provide detailed feedback on this {skill_level.lower()} {target_language} {prompt_type.lower()} writing:
+                "{structured_response}"
+                
+                Analyze:
+                1. Content and ideas (relevance, development, creativity)
+                2. Organization and structure
+                3. Grammar and syntax (identify patterns of errors)
+                4. Vocabulary usage and variety
+                5. Style and tone appropriate for {prompt_type.lower()} writing
+                
+                Provide specific examples from the text to illustrate your feedback.
+                End with 3 concrete suggestions for improvement."""
+                
+                with st.spinner("Analyzing your writing..."):
+                    structured_feedback = gemini_response(feedback_prompt)
+                    st.session_state.structured_feedback = structured_feedback
+            
+            if "structured_feedback" in st.session_state:
+                st.markdown("### Detailed Feedback")
+                st.markdown(st.session_state.structured_feedback)
+    
+    elif workspace_mode == "Collaborative Story":
+        st.write(f"Create a story together in {target_language}")
+        
+        if "collab_story" not in st.session_state:
+            st.session_state.collab_story = ""
+            st.session_state.collab_turns = 0
+        
+        if st.button("Start New Story") or not st.session_state.collab_story:
+            prompt = f"""Start a short story in {target_language} appropriate for {skill_level.lower()} level learners.
+            Write just the opening paragraph (3-4 sentences) that introduces a character and setting related to {learning_focus.lower()}.
+            Use vocabulary appropriate for {skill_level.lower()} level.
+            End at an interesting point that invites continuation."""
+            
+            with st.spinner("Creating story beginning..."):
+                story_start = gemini_response(prompt)
+                st.session_state.collab_story = story_start
+                st.session_state.collab_turns = 1
+        
+        st.markdown("### Our Story So Far")
+        st.markdown(st.session_state.collab_story)
+        
+        user_continuation = st.text_area("Continue the story:", height=100, key="story_continuation")
+        
+        if st.button("Add My Part", disabled=not user_continuation):
+            # Add user's contribution
+            st.session_state.collab_story += "\n\n" + user_continuation
+            st.session_state.collab_turns += 1
+            
+            # Request AI continuation if we haven't reached the end
+            if st.session_state.collab_turns < 6:
+                prompt = f"""Continue this collaborative story in {target_language} (appropriate for {skill_level.lower()} level):
+                
+                {st.session_state.collab_story}
+                
+                Write the next paragraph (3-4 sentences) that advances the story.
+                Use vocabulary appropriate for {skill_level.lower()} level.
+                Introduce a new element or small twist to keep the story interesting.
+                End at a point that invites further continuation."""
+                
+                with st.spinner("Writing next part of the story..."):
+                    ai_continuation = gemini_response(prompt)
+                    st.session_state.collab_story += "\n\n" + ai_continuation
+                    st.session_state.collab_turns += 1
+                
+                st.rerun()
+            else:
+                # Story is complete
+                prompt = f"""Create a final paragraph to conclude this collaborative story in {target_language}:
+                
+                {st.session_state.collab_story}
+                
+                Write a satisfying conclusion (3-4 sentences) that resolves the main story.
+                Use vocabulary appropriate for {skill_level.lower()} level."""
+                
+                with st.spinner("Finishing the story..."):
+                    story_end = gemini_response(prompt)
+                    st.session_state.collab_story += "\n\n" + story_end
+                    st.session_state.collab_turns += 1
+                
+                st.success("Story complete! You can start a new one or save this one.")
+        
+        if st.session_state.collab_turns > 1 and st.button("Save Story"):
+            if "saved_stories" not in st.session_state:
+                st.session_state.saved_stories = []
+            
+            st.session_state.saved_stories.append({
+                "date": datetime.now().strftime("%Y-%m-%d"),
+                "story": st.session_state.collab_story,
+                "turns": st.session_state.collab_turns
+            })
+            
+            st.success("Story saved to your collection!")
+    
+    elif workspace_mode == "Journal":
+        st.write(f"Keep a language learning journal in {target_language}")
+        
+        # Journal prompt generator
+        if st.button("Generate Journal Prompt"):
+            prompt = f"""Generate a reflective journal prompt in {target_language} appropriate for {skill_level.lower()} level learners.
+            The prompt should encourage personal reflection related to {learning_focus.lower()}.
+            Include 2-3 guiding questions to help structure the journal entry.
+            Provide 5-7 useful vocabulary words in {target_language} with translations that would be helpful for responding."""
+            
+            with st.spinner("Creating journal prompt..."):
+                journal_prompt = gemini_response(prompt)
+                st.session_state.journal_prompt = journal_prompt
+        
+        if "journal_prompt" in st.session_state:
+            st.markdown(st.session_state.journal_prompt)
+        
+        # Journal entry area
+        journal_date = st.date_input("Entry date:", datetime.now())
+        journal_entry = st.text_area("Write your journal entry:", height=200, key="journal_entry")
+        
+        if st.button("Save Journal Entry", disabled=not journal_entry):
+            if "journal_entries" not in st.session_state:
+                st.session_state.journal_entries = []
+            
+            st.session_state.journal_entries.append({
+                "date": journal_date.strftime("%Y-%m-%d"),
+                "prompt": st.session_state.get("journal_prompt", ""),
+                "entry": journal_entry
+            })
+            
+            st.success("Journal entry saved!")
+        
+        # View previous entries
+        if "journal_entries" in st.session_state and st.session_state.journal_entries:
+            st.markdown("### Previous Journal Entries")
+            
+            for i, entry in enumerate(reversed(st.session_state.journal_entries)):
+                if i < 3:  # Show only the most recent 3 entries
+                    st.markdown(f"**{entry['date']}**")
+                    st.markdown(entry['entry'][:100] + "..." if len(entry['entry']) > 100 else entry['entry'])
+            
+            if len(st.session_state.journal_entries) > 3:
+                st.info(f"You have {len(st.session_state.journal_entries)} journal entries in total.")
+
+def render_progress_tracker():
+    st.subheader("Writing Progress Tracker")
+    
+    if "writing_stats" not in st.session_state:
+        # Initialize with sample data for demonstration
+        st.session_state.writing_stats = {
+            "exercises_completed": 0,
+            "words_written": 0,
+            "feedback_received": 0,
+            "skill_improvements": {
+                "grammar": 0,
+                "vocabulary": 0,
+                "fluency": 0,
+                "creativity": 0
+            }
+        }
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("Exercises Completed", st.session_state.writing_stats["exercises_completed"])
+        st.metric("Total Words Written", st.session_state.writing_stats["words_written"])
+    
+    with col2:
+        st.metric("Feedback Sessions", st.session_state.writing_stats["feedback_received"])
+        st.write("**Skill Improvements**")
+        
+        # Simple skill visualization with progress bars
+        for skill, value in st.session_state.writing_stats["skill_improvements"].items():
+            st.write(f"{skill.capitalize()}")
+            st.progress(value/10)  # Assuming scale of 0-10
+    
+    # Writing activity calendar
+    st.write("**Writing Activity Calendar**")
+    st.info("In a complete implementation, this would show a calendar heatmap of your writing activity.")
+    
+    # Writing goals
+    st.write("**Writing Goals**")
+    
+    if "writing_goals" not in st.session_state:
+        st.session_state.writing_goals = [
+            {"goal": f"Write 500 words in {target_language} this week", "progress": 0.3},
+            {"goal": f"Complete 5 guided exercises", "progress": 0.6},
+            {"goal": f"Learn 20 new vocabulary words through writing", "progress": 0.4}
+        ]
+    
+    for goal in st.session_state.writing_goals:
+        st.write(goal["goal"])
+        st.progress(goal["progress"])
+    
+    # Add new goal
+    new_goal = st.text_input("Add a new writing goal:")
+    if st.button("Add Goal") and new_goal:
+        st.session_state.writing_goals.append({"goal": new_goal, "progress": 0.0})
+        st.success("New goal added!")
+        st.rerun()
+
+# Helper function to convert skill level to number
+def skill_level_to_number(level):
+    levels = {"Beginner": 1, "Elementary": 2, "Intermediate": 3, "Advanced": 4, "Fluent": 5}
+    return levels.get(level, 3)  # Default to Intermediate if not found
 
 with tab5:
     st.header("🎮 Quiz & Games")
