@@ -368,6 +368,10 @@ with tab2:
     with pronun_tabs[3]:
         st.subheader("👁️ Visual Pronunciation Aids")
         
+        # Language inputs
+        native_language = st.selectbox("Your Native Language:", ["English", "Hindi", "Mandarin", "Spanish", "Other"])
+        target_language = st.selectbox("Target Language:", ["English", "French", "German", "Japanese", "Other"])
+        
         # Articulation diagrams
         st.write("### Mouth & Tongue Position Diagrams")
         sound_to_show = st.selectbox("Select a sound to visualize:", 
@@ -396,6 +400,7 @@ with tab2:
         # IPA interactive chart
         st.write("### Interactive IPA Chart")
         st.write("Explore the International Phonetic Alphabet (IPA) symbols used in your target language")
+
         
         # Create a simple mock IPA interactive chart
         cols = st.columns(4)
