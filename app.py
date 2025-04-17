@@ -436,6 +436,70 @@ with tab2:
 if 'selected_ipa' not in st.session_state:
     st.session_state.selected_ipa = None
 
+# Helper function to adjust difficulty
+def adjust_difficulty_level(current_level, modifier):
+    levels = ["Beginner", "Elementary", "Intermediate", "Upper-Intermediate", "Advanced", "Fluent"]
+    try:
+        idx = levels.index(current_level) + modifier
+        idx = min(max(idx, 0), len(levels) - 1)
+        return levels[idx]
+    except ValueError:
+        return current_level  # fallback if unknown level
+
+# Helper function to adjust difficulty
+def adjust_difficulty_level(current_level, modifier):
+    levels = ["Beginner", "Elementary", "Intermediate", "Upper-Intermediate", "Advanced", "Fluent"]
+    try:
+        idx = levels.index(current_level) + modifier
+        idx = min(max(idx, 0), len(levels) - 1)
+        return levels[idx]
+    except ValueError:
+        return current_level  # fallback if unknown level
+
+# Writing exercise generators using Gemini
+def render_guided_composition(level):
+    st.subheader("🖋️ Guided Composition")
+    prompt = f"Generate a guided writing composition exercise for a {level} learner. Include a brief topic, a structured outline, and hints for each section."
+    response = gemini_response(prompt)
+    st.markdown(response)
+
+def render_translation_exercise(level):
+    st.subheader("🌍 Translation Exercise")
+    prompt = f"Generate a translation exercise for a {level} learner. Provide 3–5 sentences in the learner's native language and ask them to translate into the target language."
+    response = gemini_response(prompt)
+    st.markdown(response)
+
+def render_fill_in_blanks(level):
+    st.subheader("🧩 Fill in the Blanks")
+    prompt = f"Create a fill-in-the-blanks exercise for a {level} learner. Use a short paragraph and remove words related to grammar, vocabulary, or idioms."
+    response = gemini_response(prompt)
+    st.markdown(response)
+
+def render_creative_writing(level):
+    st.subheader("🎨 Creative Writing")
+    prompt = f"Suggest a creative writing prompt suitable for a {level} language learner. Encourage imagination but keep the vocabulary and grammar appropriate for their level."
+    response = gemini_response(prompt)
+    st.markdown(response)
+
+def render_dialogue_completion(level):
+    st.subheader("💬 Dialogue Completion")
+    prompt = f"Provide a partial dialogue for a {level} language learner to complete. Include situational context like at a café, job interview, or school."
+    response = gemini_response(prompt)
+    st.markdown(response)
+
+def render_error_correction(level):
+    st.subheader("🔍 Error Correction")
+    prompt = f"Generate 3–5 sentences with common grammar or vocabulary errors for a {level} learner to correct. Include the answers after a separator line."
+    response = gemini_response(prompt)
+    st.markdown(response)
+
+def render_writing_submission():
+    st.subheader("📬 Submit Your Writing")
+    st.text_area("Paste your written response here for review or self-check:", key="writing_submission")
+    if st.button("Submit Writing"):
+        st.success("Submission saved! (You can add feedback integration later 💡)")
+
+# --- Writing Tab Layout ---
 with tab4:
     st.header("📝 Writing Practice")
     
@@ -459,12 +523,13 @@ with tab4:
         difficulty_mod = st.slider("Difficulty Adjustment", -2, 2, 0, 
                                   help="Adjust difficulty relative to your current level")
         
+        # Just make sure `skill_level` is defined globally or earlier in the app
         adjusted_level = adjust_difficulty_level(skill_level, difficulty_mod)
         st.caption(f"Current difficulty: {adjusted_level}")
     
     st.divider()
-    
-    # Different exercise types
+
+    # Exercise display based on selection
     if writing_type == "Guided Composition":
         render_guided_composition(adjusted_level)
         
@@ -485,6 +550,7 @@ with tab4:
     
     # Common writing submission section
     render_writing_submission()
+
 
 def adjust_difficulty_level(base_level, modifier):
     """Adjust the difficulty level based on the slider modifier"""
