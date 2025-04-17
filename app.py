@@ -436,6 +436,9 @@ with tab2:
 if 'selected_ipa' not in st.session_state:
     st.session_state.selected_ipa = None
 
+with tab4:
+    st.header("📝 Writing Practice")
+    
 def render_writing_practice_tab():
     st.header("📝 Writing Practice")
     
@@ -826,7 +829,7 @@ def render_creative_workspace():
                     st.session_state.collab_story += "\n\n" + ai_continuation
                     st.session_state.collab_turns += 1
                 
-                st.rerun()
+                st.experimental_rerun()
             else:
                 # Story is complete
                 prompt = f"""Create a final paragraph to conclude this collaborative story in {target_language}:
@@ -955,7 +958,7 @@ def render_progress_tracker():
     if st.button("Add Goal") and new_goal:
         st.session_state.writing_goals.append({"goal": new_goal, "progress": 0.0})
         st.success("New goal added!")
-        st.rerun()
+        st.experimental_rerun()
 
 # Helper function to convert skill level to number
 def skill_level_to_number(level):
