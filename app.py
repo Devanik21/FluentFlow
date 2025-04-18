@@ -196,13 +196,57 @@ skill_level = st.sidebar.selectbox("Skill Level", ["Beginner", "Intermediate", "
 learning_focus = st.sidebar.text_input("Focus Area", "Travel, Food, etc.")
 settings_changed = st.sidebar.button("Update Settings")
 
-# --- Tab Layout ---
+
+import streamlit as st
+from datetime import datetime
+import pandas as pd
+
+# --- Gemini API response handler (mock) ---
+def gemini_response(prompt):
+    return """amigo - friend
+comida - food
+viaje - trip
+cultura - culture
+familia - family
+fiesta - party
+playa - beach
+mercado - market
+historia - history
+música - music"""
+
+# --- Vocabulary Parser ---
+def parse_vocab_list(raw_text):
+    lines = raw_text.strip().split("\n")
+    vocab = []
+    for line in lines:
+        if '-' in line:
+            word, meaning = line.split('-', 1)
+            vocab.append({"word": word.strip(), "meaning": meaning.strip()})
+    return vocab
+
+# --- Init Session State ---
+if 'vocab_list' not in st.session_state:
+    st.session_state.vocab_list = None
+if 'flashcards' not in st.session_state:
+    st.session_state.flashcards = []
+if 'flashcard_index' not in st.session_state:
+    st.session_state.flashcard_index = 0
+if 'saved_vocab' not in st.session_state:
+    st.session_state.saved_vocab = {}
+
+# --- Sidebar Settings ---
+st.sidebar.header("⚙️ Learning Settings")
+target_language = st.sidebar.selectbox("Language", ["Spanish", "French", "German", "Japanese", "Korean"])
+skill_level = st.sidebar.selectbox("Skill Level", ["Beginner", "Intermediate", "Advanced"])
+learning_focus = st.sidebar.text_input("Focus Area", "Travel, Food, etc.")
+settings_changed = st.sidebar.button("Update Settings")
+
+# --- Main Tab 1 ---
 tab1 = st.container()
 
 with tab1:
     st.header("🧠 Personalized Vocabulary List")
 
-    # --- Action Buttons ---
     col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
         if st.button("✨ Generate New Vocabulary") or (settings_changed and st.session_state.vocab_list is None):
@@ -267,31 +311,32 @@ with tab1:
     # --- Saved Vocab Lists ---
     if st.session_state.saved_vocab:
         st.subheader("📚 Saved Vocabulary Lists")
-        selected_date = st.selectbox("Select saved list", list(st.session_state.saved_vocab.keys()))
+        selected_date = st.selectbox("🗂️ Select from saved vocab lists", list(st.session_state.saved_vocab.keys()))
         if selected_date:
             saved = st.session_state.saved_vocab[selected_date]
             st.markdown(f"**Language:** {saved['language']} | **Level:** {saved['level']} | **Focus:** {saved['focus']}")
-            st.text_area("Saved Vocab", saved['text'], height=200)
+            st.text_area("📄 Saved Vocab Text", saved['text'], height=200)
 
     # --- Export Section ---
     if st.session_state.flashcards:
         st.subheader("📤 Export Vocabulary List")
-        export_format = st.selectbox("Choose Export Format", ["TXT", "CSV"])
+        export_format = st.selectbox("📝 Choose export format", ["TXT", "CSV"])
         if export_format == "TXT":
             content = "\n".join([f"{fc['word']} - {fc['meaning']}" for fc in st.session_state.flashcards])
-            st.download_button("Download TXT", content, file_name="vocab_list.txt")
+            st.download_button("📥 Download TXT", content, file_name="vocab_list.txt")
         elif export_format == "CSV":
             df = pd.DataFrame(st.session_state.flashcards)
             csv = df.to_csv(index=False)
-            st.download_button("Download CSV", csv, file_name="vocab_list.csv")
+            st.download_button("📥 Download CSV", csv, file_name="vocab_list.csv")
 
     # --- Import Section ---
     st.subheader("📥 Import Vocabulary List")
-    uploaded_file = st.file_uploader("Upload .txt file", type=["txt"])
+    uploaded_file = st.file_uploader("Upload a .txt vocabulary list", type=["txt"])
     if uploaded_file:
         content = uploaded_file.read().decode("utf-8")
         st.session_state.vocab_list = content
         st.session_state.flashcards = parse_vocab_list(content)
+        st.session_state.flashcard_index = 0
         st.success("Vocabulary imported successfully!")
 
 
