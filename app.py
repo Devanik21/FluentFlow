@@ -783,6 +783,215 @@ with st.container():
         st.write(f"Streak: {st.session_state.streak} days 🔥")
         st.markdown("*Visit again tomorrow to continue your progress!* 💖")
         
+
+
+import streamlit as st
+from datetime import datetime, timedelta
+import json
+import random
+
+# --------- Utility Functions ---------
+def start_timer(duration_min):
+    st.session_state.timer_end = datetime.now() + timedelta(minutes=duration_min)
+
+def get_time_left():
+    remaining = st.session_state.timer_end - datetime.now()
+    if remaining.total_seconds() <= 0:
+        return None
+    return remaining
+
+# Placeholder for Gemini API call
+def gemini_response(prompt: str) -> str:
+    # Implement actual Gemini API invocation here
+    return "_Gemini response for:_\n" + prompt
+
+# Initialize session state
+if 'writing_history' not in st.session_state:
+    st.session_state.writing_history = []
+if 'streak' not in st.session_state:
+    st.session_state.streak = 0
+if 'last_practice' not in st.session_state:
+    st.session_state.last_practice = None
+if 'timer_end' not in st.session_state:
+    st.session_state.timer_end = None
+if 'favorites' not in st.session_state:
+    st.session_state.favorites = []
+
+# --------- Main Container ---------
+with st.container():
+    st.header("📝 Advanced Writing Practice")
+    st.markdown("Customize your experience, earn badges, and track your progress! 🌟")
+
+    # ----- Sidebar: Settings & Profile -----
+    with st.sidebar:
+        st.subheader("User Profile & Progress")
+        username = st.text_input("Your Name", value=st.session_state.get('username', 'Learner'))
+        st.session_state['username'] = username
+        st.write(f"Current Streak: **{st.session_state.streak}** days")
+        if st.session_state.last_practice:
+            st.write(f"Last Practice: {st.session_state.last_practice.strftime('%Y-%m-%d')}")
+        st.divider()
+        st.subheader("Session Settings")
+        writing_type = st.selectbox(
+            "Exercise Type", 
+            ["Guided Composition", "Translation", "Fill-in-the-Blanks", "Creative Writing", "Email/Letter", "Summary Writing", "Debate Prompt"]
+        )
+        num_items = st.slider("Number of Prompts", 1, 5, 3)
+        time_limit = st.slider("Time Limit (min)", 1, 30, 15)
+        theme = st.selectbox("Theme", ["Light", "Dark"])
+        st.session_state['theme'] = theme
+        if st.button("Start Session"):
+            start_timer(time_limit)
+            st.session_state.session_start = datetime.now()
+            st.success("Session started! Good luck ✍️")
+
+    # Apply theme
+    if st.session_state.get('theme') == 'Dark':
+        st.markdown("<style>body {background-color: #121212; color: #EEEEEE;}</style>", unsafe_allow_html=True)
+
+    st.divider()
+
+    # ----- Timer & Progress -----
+    if st.session_state.timer_end:
+        remaining = get_time_left()
+        if remaining:
+            minutes, seconds = divmod(remaining.seconds, 60)
+            st.progress(remaining.seconds / (time_limit * 60))
+            st.write(f"⏱️ Time Left: {minutes}m {seconds}s")
+        else:
+            st.warning("⏰ Time's up! Consider wrapping up." )
+
+    # ----- Exercise Generation -----
+    st.subheader("🚀 Generate Exercises")
+    if writing_type == "Guided Composition":
+        if st.button("Generate Topics"):
+            prompt = f"Generate {num_items} advanced guided composition topics in {target_language} to help learners interested in {learning_focus}."
+            output = gemini_response(prompt)
+            st.markdown(output)
+
+    elif writing_type == "Translation":
+        if st.button("Generate Translations"):
+            prompt = f"Create {num_items} translation pairs (EN → {target_language}) relevant to {learning_focus}, include audio URLs."
+            output = gemini_response(prompt)
+            st.markdown(output)
+
+    elif writing_type == "Fill-in-the-Blanks":
+        if st.button("Generate Fill-in-the-Blanks"):
+            prompt = f"Create {num_items} paragraphs in {target_language} with blanks based on {learning_focus} topics."
+            content = gemini_response(prompt)
+            st.markdown(content)
+            with st.expander("Answers & Hints"):
+                hint_prompt = prompt + " Provide answers with one-sentence hints."
+                hints = gemini_response(hint_prompt)
+                st.markdown(hints)
+
+    elif writing_type == "Creative Writing":
+        if st.button("Generate Prompts"):
+            prompt = f"Generate {num_items} imaginative writing prompts in {target_language} around {learning_focus}."
+            output = gemini_response(prompt)
+            st.markdown(output)
+
+    elif writing_type == "Email/Letter":
+        if st.button("Generate Template"):
+            prompt = f"Create an email and a formal letter template in {target_language} focused on {learning_focus}."
+            output = gemini_response(prompt)
+            st.markdown(output)
+
+    elif writing_type == "Summary Writing":
+        if st.button("Generate Summary Task"):
+            prompt = f"Create {num_items} summary writing tasks in {target_language}, useful for learners interested in {learning_focus}."
+            output = gemini_response(prompt)
+            st.markdown(output)
+
+    elif writing_type == "Debate Prompt":
+        if st.button("Generate Debate Topics"):
+            prompt = f"Give {num_items} advanced debate topics in {target_language} that relate to {learning_focus}."
+            output = gemini_response(prompt)
+            st.markdown(output)
+
+    # ----- Vocabulary Booster -----
+    st.divider()
+    st.subheader(f"📚 Vocabulary Booster — Learn Advanced Words in {target_language}")
+    if st.button("Get Word Bank"):
+        vb_prompt = f"Provide {num_items*5} advanced vocabulary words in {target_language} related to {learning_focus}, with definitions and example sentences."
+        vb_list = gemini_response(vb_prompt)
+        st.markdown(vb_list)
+        if st.button("Add to Favorites"):
+            st.session_state.favorites.append(vb_list)
+            st.success("Words added to your favorites! ❤️")
+
+    # ----- Writing & Feedback -----
+    st.divider()
+    st.subheader("✍️ Your Writing")
+    user_input = st.text_area("Draft your text here:", height=200)
+    if user_input:
+        word_count = len(user_input.split())
+        st.write(f"Word Count: {word_count}")
+        if st.button("Check Grammar & Style"):
+            fb_prompt = (
+                f"Review this {target_language} text: '{user_input}'. Give corrections, style tips, readability level, and synonyms."
+            )
+            feedback = gemini_response(fb_prompt)
+            st.markdown("**Feedback & Suggestions**")
+            st.markdown(feedback)
+        if st.button("Get Model Answer"):
+            model_prompt = f"Provide a polished model answer in {target_language} for: '{user_input}'"
+            model_ans = gemini_response(model_prompt)
+            st.markdown("**Model Answer**")
+            st.markdown(model_ans)
+        if st.button("Analyze Readability"):
+            analysis_prompt = f"Analyze the readability and fluency of this {target_language} text: '{user_input}'. Rate from 1 to 10."
+            readability = gemini_response(analysis_prompt)
+            st.markdown("**Readability Analysis**")
+            st.markdown(readability)
+        # Store history entry
+        if st.button("Save to History"):
+            entry = {
+                'time': datetime.now().isoformat(),
+                'type': writing_type,
+                'input': user_input,
+            }
+            st.session_state.writing_history.append(entry)
+            st.success("Saved to history!")
+
+    # ----- Session History & Export -----
+    if st.session_state.writing_history:
+        st.divider()
+        st.subheader("📜 Practice History")
+        for e in st.session_state.writing_history[::-1]:
+            st.markdown(f"**{e['time']}** — *{e['type']}*")
+            st.write(e['input'][:200] + ('...' if len(e['input'])>200 else ''))
+        if st.download_button(
+            "Download History as JSON", 
+            json.dumps(st.session_state.writing_history, indent=2), 
+            file_name="writing_history.json"
+        ):
+            st.success("Downloaded history! 🎉")
+
+    if st.session_state.favorites:
+        st.divider()
+        st.subheader("🌟 Favorite Vocabulary")
+        for item in st.session_state.favorites:
+            st.markdown(item)
+
+    # ----- End-of-Session Summary & Badges -----
+    if st.session_state.get('session_start') and not get_time_left():
+        st.divider()
+        st.subheader("🏆 Session Summary")
+        total_practiced = len(st.session_state.writing_history)
+        st.write(f"You practiced {total_practiced} items in this session.")
+        # Award badge
+        if total_practiced >= 5:
+            st.balloons()
+            st.success("Badge Unlocked: Pro Writer! 🎖️")
+        # Update streak
+        today = datetime.now().date()
+        if st.session_state.last_practice != today:
+            st.session_state.streak += 1
+            st.session_state.last_practice = today
+            st.write(f"New streak: {st.session_state.streak} days!")
+        st.markdown("*Come back tomorrow to keep your streak alive!* 💪")
+        
         
 with tab5:
     st.header("🎮 Quiz & Games")
