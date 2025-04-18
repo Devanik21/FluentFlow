@@ -197,8 +197,6 @@ skill_level = st.sidebar.selectbox("Skill Level", ["Beginner", "Intermediate", "
 learning_focus = st.sidebar.text_input("Focus Area", "Travel, Food, etc.")
 settings_changed = st.sidebar.button("Update Settings")
 
-# --- Tab Layout ---
-tab1 = st.container()
 
 with tab1:
     st.header("🧠 Personalized Vocabulary List")
