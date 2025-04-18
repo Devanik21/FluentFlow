@@ -147,7 +147,6 @@ st.title("🌍 AI-Powered Language Learning (Gemini)")
 tab1, tab2, tab3, tab4, tab6 = st.tabs([
     "🧠 Vocabulary & Sentences",
     "🗣️ Pronunciation",
-    "💬 Chat with AI",
     "📝 Writing Practice",
     "🎮 Quiz & Games",
     "ℹ️ About"
