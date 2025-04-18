@@ -653,7 +653,7 @@ with st.container():
     st.markdown(st.session_state.daily_prompt)
     if st.button("Regenerate Daily Prompt 🔄"):
         st.session_state.daily_prompt_date = None
-        st.experimental_rerun()
+        st.rerun()
 
     st.divider()
 
