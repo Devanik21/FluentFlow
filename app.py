@@ -144,7 +144,7 @@ def generate_quiz(vocab_items, num_questions=5):
 st.title("🌍 AI-Powered Language Learning (Gemini)")
 
 # Tabs for separating features
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab6 = st.tabs([
     "🧠 Vocabulary & Sentences",
     "🗣️ Pronunciation",
     "💬 Chat with AI",
@@ -153,26 +153,71 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "ℹ️ About"
 ])
 
+import streamlit as st
+from datetime import datetime
+import pandas as pd
+
+# --- Gemini API response handler (placeholder) ---
+def gemini_response(prompt):
+    return """amigo - friend
+comida - food
+viaje - trip
+cultura - culture
+familia - family
+fiesta - party
+playa - beach
+mercado - market
+historia - history
+música - music"""
+
+# --- Vocab Parsing ---
+def parse_vocab_list(raw_text):
+    lines = raw_text.strip().split("\n")
+    vocab = []
+    for line in lines:
+        if '-' in line:
+            word, meaning = line.split('-', 1)
+            vocab.append({"word": word.strip(), "meaning": meaning.strip()})
+    return vocab
+
+# --- Init session state ---
+if 'vocab_list' not in st.session_state:
+    st.session_state.vocab_list = None
+if 'flashcards' not in st.session_state:
+    st.session_state.flashcards = []
+if 'flashcard_index' not in st.session_state:
+    st.session_state.flashcard_index = 0
+if 'saved_vocab' not in st.session_state:
+    st.session_state.saved_vocab = {}
+
+# --- Sidebar Settings ---
+st.sidebar.header("⚙️ Learning Settings")
+target_language = st.sidebar.selectbox("Language", ["Spanish", "French", "German", "Japanese", "Korean"])
+skill_level = st.sidebar.selectbox("Skill Level", ["Beginner", "Intermediate", "Advanced"])
+learning_focus = st.sidebar.text_input("Focus Area", "Travel, Food, etc.")
+settings_changed = st.sidebar.button("Update Settings")
+
+# --- Tab Layout ---
+tab1 = st.container()
+
 with tab1:
     st.header("🧠 Personalized Vocabulary List")
-    
-    # Generate new vocab or use saved
-    col1, col2 = st.columns([2, 1])
-    
+
+    # --- Action Buttons ---
+    col1, col2, col3 = st.columns([2, 1, 1])
     with col1:
-        if st.button("Generate New Vocabulary") or (settings_changed and st.session_state.vocab_list is None):
-            vocab_prompt = f"""Create a {skill_level.lower()} vocabulary list (10 words) for someone learning {target_language} with a focus on {learning_focus.lower()}. 
-            Include English meanings. Format each entry as 'word - meaning' for easy parsing."""
-            
+        if st.button("✨ Generate New Vocabulary") or (settings_changed and st.session_state.vocab_list is None):
+            vocab_prompt = f"""Create a {skill_level.lower()} vocabulary list (10 words) for someone learning {target_language} with a focus on {learning_focus.lower()}.
+            Include English meanings. Format each entry as 'word - meaning'."""
             vocab_response = gemini_response(vocab_prompt)
             st.session_state.vocab_list = vocab_response
-            parsed_vocab = parse_vocab_list(vocab_response)
-            st.session_state.flashcards = parsed_vocab
-    
+            st.session_state.flashcards = parse_vocab_list(vocab_response)
+            st.session_state.flashcard_index = 0
+
     with col2:
-        if st.button("Save Vocabulary List"):
-            date_key = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if st.button("💾 Save Vocabulary List"):
             if st.session_state.vocab_list:
+                date_key = datetime.now().strftime("%Y-%m-%d %H:%M")
                 st.session_state.saved_vocab[date_key] = {
                     "text": st.session_state.vocab_list,
                     "language": target_language,
@@ -180,33 +225,76 @@ with tab1:
                     "focus": learning_focus
                 }
                 st.success("Vocabulary list saved!")
-    
-    # Display vocabulary
+
+    with col3:
+        if st.button("🧹 Clear List"):
+            st.session_state.vocab_list = None
+            st.session_state.flashcards = []
+            st.session_state.flashcard_index = 0
+            st.success("Vocabulary cleared!")
+
+    # --- Display Vocabulary ---
     if st.session_state.vocab_list:
-        st.markdown(st.session_state.vocab_list)
-    
-    # Example sentences
-    st.header("✍️ Example Sentences")
-    
-    if st.button("Generate Example Sentences"):
+        st.subheader("📃 Vocabulary")
+        for idx, item in enumerate(st.session_state.flashcards):
+            st.markdown(f"**{idx+1}. {item['word']}** — *{item['meaning']}*")
+
+        # --- Flashcard Viewer ---
+        st.subheader("🃏 Flashcards")
+        if st.session_state.flashcards:
+            fc = st.session_state.flashcards[st.session_state.flashcard_index]
+            st.info(f"**{fc['word']}** → *{fc['meaning']}*")
+            col_prev, col_next = st.columns(2)
+            with col_prev:
+                if st.button("⬅️ Prev") and st.session_state.flashcard_index > 0:
+                    st.session_state.flashcard_index -= 1
+            with col_next:
+                if st.button("Next ➡️") and st.session_state.flashcard_index < len(st.session_state.flashcards) - 1:
+                    st.session_state.flashcard_index += 1
+
+    # --- Example Sentences ---
+    st.subheader("✍️ Example Sentences")
+    if st.button("📝 Generate Example Sentences"):
         sentence_prompt = f"""Give 5 {skill_level.lower()} level example sentences in {target_language} with English translations.
         These should be useful for someone focusing on {learning_focus.lower()} topics.
-        Format each as: 
+        Format each as:
         - [Target Language Sentence]
         - [English Translation]
-        (add a blank line between different examples)"""
-        
-        sentences = gemini_response(sentence_prompt)
-        st.markdown(sentences)
 
-    # Saved vocabulary
+        (add a blank line between different examples)"""
+        example_output = gemini_response(sentence_prompt)
+        st.markdown(example_output)
+
+    # --- Saved Vocab Lists ---
     if st.session_state.saved_vocab:
-        st.header("📚 Saved Vocabulary Lists")
+        st.subheader("📚 Saved Vocabulary Lists")
         selected_date = st.selectbox("Select saved list", list(st.session_state.saved_vocab.keys()))
         if selected_date:
-            saved_item = st.session_state.saved_vocab[selected_date]
-            st.markdown(f"**Language:** {saved_item['language']} | **Level:** {saved_item['level']} | **Focus:** {saved_item['focus']}")
-            st.markdown(saved_item['text'])
+            saved = st.session_state.saved_vocab[selected_date]
+            st.markdown(f"**Language:** {saved['language']} | **Level:** {saved['level']} | **Focus:** {saved['focus']}")
+            st.text_area("Saved Vocab", saved['text'], height=200)
+
+    # --- Export Section ---
+    if st.session_state.flashcards:
+        st.subheader("📤 Export Vocabulary List")
+        export_format = st.selectbox("Choose Export Format", ["TXT", "CSV"])
+        if export_format == "TXT":
+            content = "\n".join([f"{fc['word']} - {fc['meaning']}" for fc in st.session_state.flashcards])
+            st.download_button("Download TXT", content, file_name="vocab_list.txt")
+        elif export_format == "CSV":
+            df = pd.DataFrame(st.session_state.flashcards)
+            csv = df.to_csv(index=False)
+            st.download_button("Download CSV", csv, file_name="vocab_list.csv")
+
+    # --- Import Section ---
+    st.subheader("📥 Import Vocabulary List")
+    uploaded_file = st.file_uploader("Upload .txt file", type=["txt"])
+    if uploaded_file:
+        content = uploaded_file.read().decode("utf-8")
+        st.session_state.vocab_list = content
+        st.session_state.flashcards = parse_vocab_list(content)
+        st.success("Vocabulary imported successfully!")
+
 
 with tab2:
     st.header("🗣️ Pronunciation Guide")
