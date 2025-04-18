@@ -144,10 +144,9 @@ def generate_quiz(vocab_items, num_questions=5):
 st.title("🌍 AI-Powered Language Learning (Gemini)")
 
 # Tabs for separating features
-tab1, tab2, tab3, tab4, tab6 = st.tabs([
+tab1, tab2, tab4,tab5, tab6 = st.tabs([
     "🧠 Vocabulary & Sentences",
     "🗣️ Pronunciation",
-    
     "📝 Writing Practice",
     "🎮 Quiz & Games",
     "ℹ️ About"
