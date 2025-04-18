@@ -5,7 +5,7 @@ import random
 from datetime import datetime
 
 # Page configuration
-st.set_page_config(page_title="AI Language Learning", layout="wide")
+st.set_page_config(page_title="AI Language Learning", layout="wide",page_icon="🌍")
 
 # Initialize session state variables
 if "chat_history" not in st.session_state:
